@@ -682,8 +682,10 @@ async def ine_select_multiple_table_data(
     - results: List containing individual results for each queried table:
         * table_id / applied_filters / applied_period: Query context and applied parameters.
         * source: Source object containing operation info (name & ID), table info (name, ID, and public URL), applied filters, and period.
-        * total_observations / results: Data payload returned by the INE API.
-        * error: Explanatory message if blocked (e.g., if steps 2-4 were skipped or 'tv' validation failed) or failed.
+        * total_observations: Number of data points across all returned series.
+        * results: Data payload returned by the INE API.
+        * error: Explanatory message if blocked (e.g., if steps 2-4 were skipped or 'tv' validation failed), failed,
+          or if the INE API returned no data points (empty period or request too large).
 
     OPERATING NOTES AND CRITICAL RULES:
     - Strict requirement: Requires having completed steps 2, 3, and 4 for each table; otherwise, that request is BLOCKED.
@@ -754,14 +756,35 @@ async def ine_select_multiple_table_data(
                 "next_step": 'Do not invent data or search the web. First, try other operations or tables using these tools. If doubt persists, ask the user one or two specific questions whose sole purpose is to refine their initial query, then repeat the search with the new information. If you still cannot find the data, respond literally: I cannot find the information in the INE API.',
             }
 
-        extracted_data = resp.get("Data") if isinstance(resp, dict) else resp
+        # Too large requests come back as HTTP 200 with only a 'status' message
+        # (e.g. "No puede mostrarse por restricciones de volumen").
+        if isinstance(resp, dict) and "status" in resp and "Data" not in resp:
+            return {
+                "table_id": item.table_id,
+                "applied_filters": item.tv,
+                "error": f"The INE API did not return data: '{resp['status']}'.",
+                "next_step": "The request is probably too large. Repeat it with more specific 'tv' filters (one value per variable from Step 4) or fewer periods ('nult').",
+            }
+
+        # DATOS_TABLA returns a list of series, each with its own 'Data' list.
+        # A series without data in the requested period comes with an empty 'Data'.
+        series = resp if isinstance(resp, list) else [resp]
+        total_observations = sum(len(s.get("Data") or []) for s in series if isinstance(s, dict))
+        if not total_observations:
+            return {
+                "table_id": item.table_id,
+                "applied_filters": item.tv,
+                "applied_period": period,
+                "error": f"The INE API returned {len(series)} series but no data points for the requested period.",
+                "next_step": "Repeat the request with more periods (a larger 'nult', e.g. 10) or another 'date' range: some series have no data in the latest periods. If they are still empty, try other tables.",
+            }
 
         result = {
             "table_id": item.table_id,
             "source": state.build_source(item.table_id, item.tv, period, OPERATIONS),
             "applied_filters": item.tv,
             "applied_period": period,
-            "total_observations": len(extracted_data) if isinstance(extracted_data, list) else 1,
+            "total_observations": total_observations,
             "results": resp,
         }
         if notice:

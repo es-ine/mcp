@@ -34,7 +34,9 @@ VALUES = {
                      {"Id": 2, "FK_Variable": 3, "Nombre": "Mujeres"}],
     ("4247", "115"): [{"Id": 31, "FK_Variable": 115, "Nombre": "Murcia, Región de"}],
 }
-DATA = {"Data": [{"Fecha": 1700000000000, "Valor": 12.3}]}
+# DATOS_TABLA returns a list of series, each with its own 'Data' list.
+DATA = [{"COD": "EPA1", "Data": [{"Fecha": 1700000000000, "Valor": 12.3},
+                                 {"Fecha": 1690000000000, "Valor": 12.1}]}]
 
 
 class FakeIne:
@@ -124,7 +126,7 @@ def test_full_flow_returns_data_with_source(ine):
 
     result = step5(["3:1"])["results"][0]
     assert result["results"] == DATA
-    assert result["total_observations"] == 1
+    assert result["total_observations"] == 2
     source = result["source"]
     assert source["operation"] == {"id": "293", "name": "Encuesta de Población Activa (EPA)"}
     assert source["table"]["url"] == "https://www.ine.es/jaxiT3/Tabla.htm?t=4247"
@@ -143,6 +145,24 @@ def test_default_period_is_latest_observation(ine):
     assert "nult=1" in result["applied_period"]
     data_call = [c for c in ine.calls if c[0].startswith("DATOS_TABLA")][-1]
     assert ("nult", "1") in data_call[1] and ("tv", "3:1") in data_call[1]
+
+
+def test_period_without_data_is_reported_as_no_data(ine, monkeypatch):
+    # The INE API returns the series with an empty 'Data' list.
+    monkeypatch.setitem(globals(), "DATA", [{"COD": "EPA1", "Data": []}])
+    step1(); step2(); step3(); step4()
+    result = step5(["3:1"], date="20990101:20991231")["results"][0]
+    assert "no data points" in result["error"]
+    assert "nult" in result["next_step"]
+
+
+def test_volume_restriction_is_reported_as_an_error(ine, monkeypatch):
+    # Too large requests come back as HTTP 200 with only a 'status' message.
+    monkeypatch.setitem(globals(), "DATA", {"status": "No puede mostrarse por restricciones de volumen"})
+    step1(); step2(); step3(); step4()
+    result = step5(["3:1"])["results"][0]
+    assert "restricciones de volumen" in result["error"]
+    assert "tv" in result["next_step"]
 
 
 def test_nult_wins_over_date_and_a_notice_is_returned(ine):
