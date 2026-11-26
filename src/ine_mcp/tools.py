@@ -729,7 +729,7 @@ async def ine_select_multiple_table_data(
         if nult is not None:
             query_params.append(("nult", str(nult)))
         else:
-            query_params.append(("date", date_str))
+            query_params.extend(("date", d) for d in date_str.split(","))
 
         if params.det is not None:
             query_params.append(("det", str(params.det)))

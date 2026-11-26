@@ -145,6 +145,14 @@ def test_default_period_is_latest_observation(ine):
     assert ("nult", "1") in data_call[1] and ("tv", "3:1") in data_call[1]
 
 
+def test_several_dates_are_sent_as_repeated_date_parameters(ine):
+    step1(); step2(); step3(); step4()
+    step5(["3:1"], date="20240101,20250101:20251231")
+    data_call = [c for c in ine.calls if c[0].startswith("DATOS_TABLA")][-1]
+    assert [p for p in data_call[1] if p[0] == "date"] == [
+        ("date", "20240101"), ("date", "20250101:20251231")]
+
+
 def test_nult_wins_over_date_and_a_notice_is_returned(ine):
     step1(); step2(); step3(); step4()
     result = step5(["3:1"], nult=4, date="20240101:20241231")["results"][0]
