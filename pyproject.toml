@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ine-mcp"
+version = "0.1.0"
+description = "MCP server for the official statistics of Spain, published by INE (Instituto Nacional de Estadística)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "EUPL-1.2"
+license-files = ["LICENSE.md"]
+authors = [{ name = "INE MCP Contributors" }]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "ine",
+    "spain",
+    "statistics",
+    "official-statistics",
+    "open-data",
+    "llm",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "mcp[cli]>=2.1.1",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+]
+
+[project.urls]
+Repository = "https://gitlab.ine.es/prod-estadistica/metodologia/ia-ready/mcp"
+Issues = "https://gitlab.ine.es/prod-estadistica/metodologia/ia-ready/mcp/-/issues"
+"INE JSON API" = "https://www.ine.es/dyngs/DAB/index.htm?cid=1099"
+
+[project.scripts]
+ine-mcp = "ine_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ine_mcp"]
+
+# The server reads its instructions from ine_mcp/Resources at runtime, so the
+# Markdown file has to travel inside the wheel.
+[tool.hatch.build.targets.wheel.force-include]
+"Resources/ine_mcp_instructions.md" = "ine_mcp/Resources/ine_mcp_instructions.md"
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "Resources", "README.md", "LICENSE.md", "pyproject.toml"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
