@@ -99,7 +99,7 @@ copia local ejecutándose en tu máquina. La instalación local está disponible
 **Requisitos:** Python 3.11 o superior y [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
-git clone https://gitlab.ine.es/prod-estadistica/metodologia/ia-ready/mcp.git ine-mcp
+git clone https://github.com/es-ine/mcp.git ine-mcp
 ```
 
 ```bash
