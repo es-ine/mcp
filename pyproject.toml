@@ -44,8 +44,8 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://gitlab.ine.es/prod-estadistica/metodologia/ia-ready/mcp"
-Issues = "https://gitlab.ine.es/prod-estadistica/metodologia/ia-ready/mcp/-/issues"
+Repository = "https://github.com/es-ine/mcp"
+Issues = "https://github.com/es-ine/mcp/issues"
 "INE JSON API" = "https://www.ine.es/dyngs/DAB/index.htm?cid=1099"
 
 [project.scripts]
