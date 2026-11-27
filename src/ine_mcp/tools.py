@@ -45,7 +45,7 @@ from typing import Optional
 from mcp.server.mcpserver import Context, MCPServer
 
 from .client import handle_api_error, ine_get, ine_get_all_pages
-from .config import CATALOG_TTL, instruction_text
+from .config import CATALOG_TTL, MAX_DATA_CHARS, instruction_text
 from .models import (
     OperationTableFilter,
     SelectMultipleTableDataInput,
@@ -689,9 +689,12 @@ async def ine_select_multiple_table_data(
     - Strict requirement: Requires having completed steps 2, 3, and 4 for each table; otherwise, that request is BLOCKED.
     - CRITICAL RULE FOR 'tv': Always use the 'FK_Variable' returned inside the selected value object (NEVER the 'group_id'). Malformed filters or those not originating from consulted values are REJECTED.
     - Period default: If neither 'nult' nor 'date' is specified, the server automatically applies nult=1 (most recent data available).
+    - Oversized results include series and observation counts and a sample of series names instead of the data. Retry a batch item on its own or narrow its filters or period.
     - MANDATORY SOURCE ATTRIBUTION: Each result includes a 'source' field. ALWAYS include it in your final response; if using multiple tables, indicate it for each piece of data."""
 
     state = SESSIONS.get_state(ctx)
+    # The size limit applies to the whole call, so it is split between its requests.
+    data_budget = MAX_DATA_CHARS // len(params.requests)
 
     async def _process_data_request(item: TableDataFilterItem):
         """Validates and runs the data request of ONE table (Step 5); returns a result or a BLOCKED/error dict."""
@@ -752,6 +755,21 @@ async def ine_select_multiple_table_data(
                 "applied_filters": item.tv,
                 "error": f"No data obtained for table '{item.table_id}' with specified filters.",
                 "next_step": 'Do not invent data or search the web. First, try other operations or tables using these tools. If doubt persists, ask the user one or two specific questions whose sole purpose is to refine their initial query, then repeat the search with the new information. If you still cannot find the data, respond literally: I cannot find the information in the INE API.',
+            }
+
+        size = len(json.dumps(resp, ensure_ascii=False, indent=2))
+        if size > data_budget:
+            series = resp if isinstance(resp, list) else [resp]
+            observations = sum(len(s.get("Data") or []) for s in series if isinstance(s, dict))
+            return {
+                "table_id": item.table_id,
+                "applied_filters": item.tv,
+                "applied_period": period,
+                "error": (f"Result too large, data not returned: {len(series)} series and "
+                          f"{observations:,} observations ({size:,} characters, limit {data_budget:,})."),
+                "series_sample": [s.get("Nombre") for s in series[:10] if isinstance(s, dict)],
+                "next_step": ("Add 'tv' filters for variables the user did not ask to break down, "
+                              "or use a smaller 'nult' or a shorter 'date' range."),
             }
 
         extracted_data = resp.get("Data") if isinstance(resp, dict) else resp
