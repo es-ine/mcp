@@ -40,6 +40,14 @@ HTTP_PORT_RAW = os.getenv("MCP_PORT", "8000")
 # Public URL template of an INE table (used to build the 'source' object).
 INE_TABLE_URL = "https://www.ine.es/jaxiT3/Tabla.htm?t={table_id}"
 
+# Per-call data budget for step 5, in characters of indented INE JSON (env var INE_MAX_DATA_CHARS).
+try:
+    MAX_DATA_CHARS = int(os.getenv("INE_MAX_DATA_CHARS", "100000"))
+    if MAX_DATA_CHARS <= 0:
+        raise ValueError
+except ValueError:
+    raise SystemExit("INE_MAX_DATA_CHARS must be a positive integer.") from None
+
 # Seconds the operations/tables catalogs are cached in memory.
 CATALOG_TTL = 6 * 3600
 

@@ -297,6 +297,7 @@ uv run pytest
 - Labels are in Spanish and English, as INE publishes them.
 - Tools are read-only: the server never writes or modifies anything.
 - Only operations with published tables can return data.
+- Data extraction has a budget of 100,000 characters per call (`INE_MAX_DATA_CHARS`), measured on the indented INE response and split equally between the call's requests. Larger results return a summary asking for narrower filters.
 - The hosted endpoint is not available yet; use the local setup.
 
 ## Privacy

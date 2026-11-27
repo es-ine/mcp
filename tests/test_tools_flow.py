@@ -210,3 +210,31 @@ def test_sessions_do_not_share_progress(ine, monkeypatch):
     monkeypatch.setattr(tools, "SESSIONS", SessionStore())  # a brand-new client
     result = step3()["results_by_table"][0]
     assert result["error"].startswith("BLOCKED")
+
+
+# ---------------------------------------------------------------------------
+# Result size limit
+# ---------------------------------------------------------------------------
+
+def test_too_large_result_returns_a_summary_instead_of_the_data(ine, monkeypatch):
+    big = [{"Nombre": f"Serie {i}", "Data": [{"Fecha": 1700000000000, "Valor": 1.0}] * 3}
+           for i in range(20)]
+    monkeypatch.setitem(globals(), "DATA", big)
+    monkeypatch.setattr(tools, "MAX_DATA_CHARS", 500)
+    step1(); step2(); step3(); step4()
+    result = step5(["3:"], nult=3)["results"][0]
+    assert "results" not in result
+    assert "20 series and 60 observations" in result["error"]
+    assert result["series_sample"] == [f"Serie {i}" for i in range(10)]
+    assert "tv" in result["next_step"] and "nult" in result["next_step"]
+
+
+def test_size_limit_is_shared_between_the_requests_of_one_call(ine, monkeypatch):
+    size = len(json.dumps(DATA, ensure_ascii=False, indent=2))
+    monkeypatch.setattr(tools, "MAX_DATA_CHARS", 2 * size - 1)  # enough for one request, not two
+    step1(); step2(); step3(); step4()
+    one = step5(["3:1"])["results"][0]
+    assert one["results"] == DATA
+    two = run(tools.ine_select_multiple_table_data(SelectMultipleTableDataInput(
+        requests=[{"table_id": "4247", "tv": ["3:1"]}, {"table_id": "4247", "tv": ["3:2"]}])))
+    assert all("too large" in r["error"] for r in two["results"])

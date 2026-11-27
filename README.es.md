@@ -297,6 +297,7 @@ uv run pytest
 - Las etiquetas están en español e inglés, tal como las publica el INE.
 - Las herramientas son de solo lectura: el servidor nunca escribe ni modifica nada.
 - Solo las operaciones con tablas publicadas pueden devolver datos.
+- La extracción de datos tiene un límite de 100.000 caracteres por llamada (`INE_MAX_DATA_CHARS`), medido sobre la respuesta indentada del INE y repartido a partes iguales entre las peticiones de la llamada. Si el resultado es mayor, se devuelve un resumen que pide filtros más concretos.
 - El endpoint alojado todavía no está disponible; usa la instalación local.
 
 ## Privacidad
