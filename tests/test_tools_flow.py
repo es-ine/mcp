@@ -85,19 +85,19 @@ def step1(queries=("paro", "unemployment")):
     return run(tools.ine_select_operation(SelectOperationInput(queries=list(queries))))
 
 
-def step2(op="293"):
+def step2(op="293", **extra):
     return run(tools.ine_select_multiple_tables(
-        SelectTableInput(operations=[{"operation_id": op}])))
+        SelectTableInput(operations=[{"operation_id": op}], **extra)))
 
 
-def step3(table="4247"):
+def step3(table="4247", **extra):
     return run(tools.ine_select_multiple_table_groups(
-        SelectMultipleTableGroupsInput(requests=[{"table_id": table}])))
+        SelectMultipleTableGroupsInput(requests=[{"table_id": table, **extra}])))
 
 
-def step4(table="4247", group="70"):
+def step4(table="4247", group="70", **extra):
     return run(tools.ine_select_multiple_values(
-        SelectMultipleValuesInput(requests=[{"table_id": table, "group_id": group}])))
+        SelectMultipleValuesInput(requests=[{"table_id": table, "group_id": group, **extra}])))
 
 
 def step5(tv, table="4247", **period):
@@ -190,6 +190,27 @@ def test_step_5_blocks_without_step_4_and_never_calls_the_api(ine):
     assert result["error"].startswith("BLOCKED")
     assert result["required_step"] == 4
     assert not any(e.startswith("DATOS_TABLA") for e in ine.endpoints())
+
+
+def test_step_3_blocks_table_that_step_2_truncated(ine, monkeypatch):
+    monkeypatch.setitem(TABLES, "293", TABLES["293"] + [{"Id": 50902, "Nombre": "Otra tabla"}])
+    step1()
+    assert [t["Id"] for t in step2(top_n=1)["results_by_operation"][0]["tables"]] == [4247]
+    result = step3(table="50902")["results_by_table"][0]
+    assert result["error"].startswith("BLOCKED")
+    assert result["required_step"] == 2
+
+
+def test_step_5_blocks_value_that_step_4_truncated(ine, monkeypatch):
+    monkeypatch.setitem(VALUES, ("4247", "115"), [
+        {"Id": 31, "FK_Variable": 115, "Nombre": "Murcia, Región de"},
+        {"Id": 32, "FK_Variable": 115, "Nombre": "Galicia"},
+    ])
+    step1(); step2(); step3()
+    step4(group="115", top_n=1)
+    assert step5(["115:31"])["results"][0]["results"] == DATA
+    result = step5(["115:32"])["results"][0]
+    assert "'32' is not one that" in result["error"]
 
 
 # ---------------------------------------------------------------------------
