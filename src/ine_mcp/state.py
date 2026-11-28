@@ -141,7 +141,7 @@ class FlowState:
         """
         checks = [
             (2, table_id not in self.tables, "ine_select_multiple_tables",
-             "table does not originate from any table search in this session",
+             "table is not among those returned in this session (one past top_n needs another step 2)",
              'Step 2: Call ine_select_multiple_tables with candidate operation IDs (all in a SINGLE call) and choose the most suitable table by reading their names.'),
             (3, table_id not in self.groups, "ine_select_multiple_table_groups",
              "variables/groups for this table have not been queried",
@@ -189,13 +189,15 @@ class FlowState:
 
             if fk not in reg["fks"]:
                 return (
-                    f"In filter '{f}', variable/FK '{fk}' was not found in queried values for table {table_id}. "
-                    f"Ensure you are using the exact 'FK_Variable' property from Step 4 response."
+                    f"In filter '{f}', variable/FK '{fk}' is not one that ine_select_multiple_values returned "
+                    f"for table {table_id}. Use the 'FK_Variable' of a value in its response; a group past "
+                    f"step 4's top_n needs another search."
                 )
 
             if vid and (fk, vid) not in reg["pairs"]:
-                return (f"In filter '{f}', value '{vid}' does not exist for variable '{fk}' in table "
-                        f"{table_id}. Use an 'Id' returned by ine_select_multiple_values.")
+                return (f"In filter '{f}', value '{vid}' is not one that ine_select_multiple_values returned for "
+                        f"variable '{fk}' in table {table_id}. Use an 'Id' from its response; a group past "
+                        f"step 4's top_n needs another search.")
         return None
 
     # -- Output ---------------------------------------------------------

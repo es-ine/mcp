@@ -335,8 +335,8 @@ async def ine_select_multiple_tables(params: SelectTableInput, ctx: Optional[Con
                     "next_step": 'Do not invent data or search the web. First, try other operations or tables using these tools. If doubt persists, ask the user one or two specific questions whose sole purpose is to refine their initial query, then repeat the search with the new information. If you still cannot find the data, respond literally: I cannot find the information in the INE API.',
                 }
 
-            state.register_tables(op_id, all_tables)
             res = search(all_tables, filter_item.queries, limit=params.top_n)
+            state.register_tables(op_id, res["items"])
 
             return {
                 "operation_id": op_id,
@@ -449,8 +449,8 @@ async def ine_select_multiple_table_groups(
                     "next_step": 'Do not invent data or search the web. First, try other operations or tables using these tools. If doubt persists, ask the user one or two specific questions whose sole purpose is to refine their initial query, then repeat the search with the new information. If you still cannot find the data, respond literally: I cannot find the information in the INE API.',
                 }
 
-            state.register_groups(item.table_id, resp)
             res = filter_items(resp, item.query_filter, limit=item.top_n or 50)
+            state.register_groups(item.table_id, res["items"])
 
             return {
                 "table_id": item.table_id,
@@ -603,8 +603,8 @@ async def ine_select_multiple_values(
                 "selected_values": [],
             }
 
-        state.register_values(item.table_id, resp)
         res = search(resp, item.queries, limit=item.top_n or 50)
+        state.register_values(item.table_id, res["items"])
 
         return {
             "table_id": item.table_id,

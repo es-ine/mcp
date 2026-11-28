@@ -159,8 +159,8 @@ def test_validate_tv_allows_group_id_that_is_also_a_real_fk_variable():
 
 def test_validate_tv_rejects_unknown_variable_and_unknown_value():
     state = prepared_state()
-    assert "was not found" in state.validate_tv("T", ["999:1"])
-    assert "does not exist" in state.validate_tv("T", ["115:99"])
+    assert "is not one that" in state.validate_tv("T", ["999:1"])
+    assert "is not one that" in state.validate_tv("T", ["115:99"])
 
 
 # ---------------------------------------------------------------------------
